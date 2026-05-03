@@ -5,12 +5,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.softeen.wagecalculator.ui.SalaryViewModel
+import com.softeen.wagecalculator.ui.screens.ConfigurationScreen
+import com.softeen.wagecalculator.ui.screens.ConverterScreen
 import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,29 +22,33 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WageCalculatorTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+                SalaryApp()
             }
         }
     }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+fun SalaryApp() {
+    val navController = rememberNavController()
+    val viewModel: SalaryViewModel = viewModel()
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    WageCalculatorTheme {
-        Greeting("Android")
+    NavHost(
+        navController = navController,
+        startDestination = "converter",
+        modifier = Modifier.fillMaxSize()
+    ) {
+        composable("converter") {
+            ConverterScreen(
+                viewModel = viewModel,
+                onNavigateToConfig = { navController.navigate("config") }
+            )
+        }
+        composable("config") {
+            ConfigurationScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
