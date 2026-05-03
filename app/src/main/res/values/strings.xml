@@ -32,6 +32,21 @@
     <string name="label_pro_tip">Pro Tip</string>
     <string name="pro_tip_body">Most full-time roles assume 2,080 working hours per year (40 hrs/week × 52 weeks).</string>
 
+    <!-- Spotlight card titles -->
+    <string name="spotlight_title_hourly">YOUR HOURLY RATE</string>
+    <string name="spotlight_title_yearly">YOUR YEARLY EARNINGS</string>
+    <string name="spotlight_title_monthly">YOUR MONTHLY EARNINGS</string>
+    <string name="spotlight_title_bi_weekly">YOUR BI-WEEKLY EARNINGS</string>
+    <string name="spotlight_title_weekly">YOUR WEEKLY EARNINGS</string>
+    <string name="spotlight_title_daily">YOUR DAILY EARNINGS</string>
+
+    <!-- Per-period unit labels -->
+    <string name="label_per_year"> / year</string>
+    <string name="label_per_month"> / month</string>
+    <string name="label_per_two_weeks"> / 2 weeks</string>
+    <string name="label_per_week"> / week</string>
+    <string name="label_per_day"> / day</string>
+
     <!-- Frequency labels -->
     <string name="frequency_yearly">yearly</string>
     <string name="frequency_monthly">monthly</string>

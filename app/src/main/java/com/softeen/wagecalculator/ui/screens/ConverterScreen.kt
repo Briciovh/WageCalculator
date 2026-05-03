@@ -1,17 +1,17 @@
 package com.softeen.wagecalculator.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.softeen.wagecalculator.R
 import com.softeen.wagecalculator.data.model.CurrencyPair
+import com.softeen.wagecalculator.data.model.Frequency
+import com.softeen.wagecalculator.data.model.SalaryResults
 import com.softeen.wagecalculator.ui.SalaryViewModel
 import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 import java.text.NumberFormat
@@ -35,6 +37,9 @@ fun ConverterScreen(
 ) {
     val results by viewModel.results.collectAsState()
     val config by viewModel.config.collectAsState()
+    var selectedPeriod by remember { mutableStateOf(Frequency.HOURLY) }
+
+    val gridPeriods = Frequency.entries.filter { it != selectedPeriod }
 
     Scaffold(
         topBar = {
@@ -69,8 +74,9 @@ fun ConverterScreen(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            HourlyRateCard(
-                hourly = results.hourly,
+            SpotlightCard(
+                period = selectedPeriod,
+                pair = results.pairFor(selectedPeriod),
                 annualHours = results.annualHours,
                 baseCurrencyCode = config.baseCurrency.code,
                 targetCurrencyCode = config.targetCurrency.code
@@ -84,14 +90,23 @@ fun ConverterScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                item { ResultCard(stringResource(R.string.label_yearly),    results.yearly,    config.baseCurrency.code, config.targetCurrency.code) }
-                item { ResultCard(stringResource(R.string.label_monthly),   results.monthly,   config.baseCurrency.code, config.targetCurrency.code) }
-                item { ResultCard(stringResource(R.string.label_bi_weekly), results.biWeekly,  config.baseCurrency.code, config.targetCurrency.code) }
-                item { ResultCard(stringResource(R.string.label_weekly),    results.weekly,    config.baseCurrency.code, config.targetCurrency.code) }
-                item { ResultCard(stringResource(R.string.label_daily),     results.daily,     config.baseCurrency.code, config.targetCurrency.code) }
+                items(gridPeriods) { period ->
+                    ResultCard(
+                        label = stringResource(period.labelRes),
+                        pair = results.pairFor(period),
+                        baseCurrencyCode = config.baseCurrency.code,
+                        targetCurrencyCode = config.targetCurrency.code,
+                        onClick = { selectedPeriod = period }
+                    )
+                }
 
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             stringResource(R.string.disclaimer_estimates),
                             fontSize = 10.sp,
@@ -106,7 +121,13 @@ fun ConverterScreen(
 }
 
 @Composable
-fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int, baseCurrencyCode: String, targetCurrencyCode: String) {
+fun SpotlightCard(
+    period: Frequency,
+    pair: CurrencyPair,
+    annualHours: Int,
+    baseCurrencyCode: String,
+    targetCurrencyCode: String
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -118,31 +139,35 @@ fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int, baseCurrencyCode: Str
                 Icons.AutoMirrored.Filled.TrendingUp,
                 contentDescription = null,
                 tint = Color(0xFFF0F0F0),
-                modifier = Modifier.size(80.dp).align(Alignment.TopEnd)
+                modifier = Modifier
+                    .size(80.dp)
+                    .align(Alignment.TopEnd)
             )
             Column {
-                Text(stringResource(R.string.label_hourly_rate), fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                Text(period.spotlightTitle(), fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(baseCurrencyCode, fontSize = 12.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatCurrency(hourly.base), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                    Text(stringResource(R.string.label_per_hour), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(formatCurrency(pair.base), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                    Text(period.unitLabel(), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
 
                 Text(targetCurrencyCode, fontSize = 12.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatCurrency(hourly.target), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                    Text(stringResource(R.string.label_per_hour), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(formatCurrency(pair.target), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                    Text(period.unitLabel(), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Settings, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.label_based_on_hours, annualHours), fontSize = 12.sp, color = Color.Gray)
+                if (period == Frequency.HOURLY) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.label_based_on_hours, annualHours), fontSize = 12.sp, color = Color.Gray)
+                    }
                 }
             }
         }
@@ -150,9 +175,17 @@ fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int, baseCurrencyCode: Str
 }
 
 @Composable
-fun ResultCard(label: String, pair: CurrencyPair, baseCurrencyCode: String, targetCurrencyCode: String) {
+fun ResultCard(
+    label: String,
+    pair: CurrencyPair,
+    baseCurrencyCode: String,
+    targetCurrencyCode: String,
+    onClick: () -> Unit = {}
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -177,6 +210,43 @@ fun formatCurrency(amount: Double): String {
     return formatter.format(amount)
 }
 
+// — Extensions —
+
+private fun SalaryResults.pairFor(frequency: Frequency): CurrencyPair = when (frequency) {
+    Frequency.HOURLY    -> hourly
+    Frequency.YEARLY    -> yearly
+    Frequency.MONTHLY   -> monthly
+    Frequency.BI_WEEKLY -> biWeekly
+    Frequency.WEEKLY    -> weekly
+    Frequency.DAILY     -> daily
+}
+
+@Composable
+private fun Frequency.spotlightTitle(): String = stringResource(
+    when (this) {
+        Frequency.HOURLY    -> R.string.spotlight_title_hourly
+        Frequency.YEARLY    -> R.string.spotlight_title_yearly
+        Frequency.MONTHLY   -> R.string.spotlight_title_monthly
+        Frequency.BI_WEEKLY -> R.string.spotlight_title_bi_weekly
+        Frequency.WEEKLY    -> R.string.spotlight_title_weekly
+        Frequency.DAILY     -> R.string.spotlight_title_daily
+    }
+)
+
+@Composable
+private fun Frequency.unitLabel(): String = stringResource(
+    when (this) {
+        Frequency.HOURLY    -> R.string.label_per_hour
+        Frequency.YEARLY    -> R.string.label_per_year
+        Frequency.MONTHLY   -> R.string.label_per_month
+        Frequency.BI_WEEKLY -> R.string.label_per_two_weeks
+        Frequency.WEEKLY    -> R.string.label_per_week
+        Frequency.DAILY     -> R.string.label_per_day
+    }
+)
+
+// — Previews —
+
 @Preview(showBackground = true, showSystemUi = true, name = "ConverterScreen – Light")
 @Composable
 fun ConverterScreenPreview() {
@@ -194,13 +264,30 @@ fun ConverterScreenDarkPreview() {
     }
 }
 
-@Preview(showBackground = true, name = "HourlyRateCard")
+@Preview(showBackground = true, name = "SpotlightCard – Hourly")
 @Composable
-fun HourlyRateCardPreview() {
+fun SpotlightCardPreview() {
     WageCalculatorTheme {
         Surface {
-            HourlyRateCard(
-                hourly = CurrencyPair(base = 28.85, target = 533.72),
+            SpotlightCard(
+                period = Frequency.HOURLY,
+                pair = CurrencyPair(base = 28.85, target = 533.72),
+                annualHours = 2080,
+                baseCurrencyCode = "USD",
+                targetCurrencyCode = "MXN"
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "SpotlightCard – Monthly")
+@Composable
+fun SpotlightCardMonthlyPreview() {
+    WageCalculatorTheme {
+        Surface {
+            SpotlightCard(
+                period = Frequency.MONTHLY,
+                pair = CurrencyPair(base = 5000.0, target = 92500.0),
                 annualHours = 2080,
                 baseCurrencyCode = "USD",
                 targetCurrencyCode = "MXN"
