@@ -2,6 +2,8 @@ package com.softeen.wagecalculator.ui
 
 import androidx.lifecycle.ViewModel
 import com.softeen.wagecalculator.data.model.CurrencyPair
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.softeen.wagecalculator.data.model.SalaryConfig
 import com.softeen.wagecalculator.data.model.SalaryResults
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,7 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-class SalaryViewModel : ViewModel() {
+@HiltViewModel
+class SalaryViewModel @Inject constructor() : ViewModel() {
     private val _config = MutableStateFlow(SalaryConfig())
     val config: StateFlow<SalaryConfig> = _config.asStateFlow()
 

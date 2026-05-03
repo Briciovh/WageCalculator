@@ -217,19 +217,14 @@ private fun CurrencyDropdown(
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen – Light")
+@Preview(showBackground = true)
 @Composable
 fun ConfigurationScreenPreview() {
     WageCalculatorTheme {
-        ConfigurationScreen(viewModel = SalaryViewModel(), onNavigateBack = {})
+        ConfigurationScreen(
+            viewModel = SalaryViewModel(),
+            onNavigateBack = {}
+        )
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen – Dark",
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun ConfigurationScreenDarkPreview() {
-    WageCalculatorTheme {
-        ConfigurationScreen(viewModel = SalaryViewModel(), onNavigateBack = {})
-    }
-}

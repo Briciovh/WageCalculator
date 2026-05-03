@@ -247,20 +247,14 @@ private fun Frequency.unitLabel(): String = stringResource(
 
 // — Previews —
 
-@Preview(showBackground = true, showSystemUi = true, name = "ConverterScreen – Light")
+@Preview(showBackground = true)
 @Composable
 fun ConverterScreenPreview() {
     WageCalculatorTheme {
-        ConverterScreen(viewModel = SalaryViewModel(), onNavigateToConfig = {})
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "ConverterScreen – Dark",
-    uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun ConverterScreenDarkPreview() {
-    WageCalculatorTheme {
-        ConverterScreen(viewModel = SalaryViewModel(), onNavigateToConfig = {})
+        ConverterScreen(
+            viewModel = SalaryViewModel(),
+            onNavigateToConfig = {}
+        )
     }
 }
 
