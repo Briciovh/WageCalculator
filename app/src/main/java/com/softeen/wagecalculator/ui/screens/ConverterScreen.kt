@@ -1,10 +1,8 @@
 package com.softeen.wagecalculator.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
@@ -17,12 +15,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.softeen.wagecalculator.R
 import com.softeen.wagecalculator.data.model.CurrencyPair
-import com.softeen.wagecalculator.data.model.SalaryResults
 import com.softeen.wagecalculator.ui.SalaryViewModel
 import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 import java.text.NumberFormat
@@ -35,20 +34,21 @@ fun ConverterScreen(
     onNavigateToConfig: () -> Unit
 ) {
     val results by viewModel.results.collectAsState()
+    val config by viewModel.config.collectAsState()
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { 
+                title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Calculate, contentDescription = null, modifier = Modifier.size(24.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Salary Converter", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.screen_converter_title), fontWeight = FontWeight.Bold)
                     }
                 },
                 actions = {
                     IconButton(onClick = onNavigateToConfig) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings))
                     }
                 }
             )
@@ -62,14 +62,19 @@ fun ConverterScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Transform your yearly W2 salary into an hourly rate and see your earnings breakdown.",
+                stringResource(R.string.converter_description),
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 color = Color.Gray,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            HourlyRateCard(results.hourly, results.annualHours)
+            HourlyRateCard(
+                hourly = results.hourly,
+                annualHours = results.annualHours,
+                baseCurrencyCode = config.baseCurrency.code,
+                targetCurrencyCode = config.targetCurrency.code
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -79,16 +84,16 @@ fun ConverterScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                item { ResultCard("YEARLY", results.yearly) }
-                item { ResultCard("MONTHLY", results.monthly) }
-                item { ResultCard("BI-WEEKLY", results.biWeekly) }
-                item { ResultCard("WEEKLY", results.weekly) }
-                item { ResultCard("DAILY", results.daily) }
-                
+                item { ResultCard(stringResource(R.string.label_yearly),    results.yearly,    config.baseCurrency.code, config.targetCurrency.code) }
+                item { ResultCard(stringResource(R.string.label_monthly),   results.monthly,   config.baseCurrency.code, config.targetCurrency.code) }
+                item { ResultCard(stringResource(R.string.label_bi_weekly), results.biWeekly,  config.baseCurrency.code, config.targetCurrency.code) }
+                item { ResultCard(stringResource(R.string.label_weekly),    results.weekly,    config.baseCurrency.code, config.targetCurrency.code) }
+                item { ResultCard(stringResource(R.string.label_daily),     results.daily,     config.baseCurrency.code, config.targetCurrency.code) }
+
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                     Box(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            "Calculations are gross estimates before taxes and deductions.",
+                            stringResource(R.string.disclaimer_estimates),
                             fontSize = 10.sp,
                             color = Color.Gray,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -101,7 +106,7 @@ fun ConverterScreen(
 }
 
 @Composable
-fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int) {
+fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int, baseCurrencyCode: String, targetCurrencyCode: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -111,33 +116,33 @@ fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int) {
         Box(modifier = Modifier.padding(24.dp)) {
             Icon(
                 Icons.AutoMirrored.Filled.TrendingUp,
-                contentDescription = null, 
-                tint = Color(0xFFF0F0F0), 
+                contentDescription = null,
+                tint = Color(0xFFF0F0F0),
                 modifier = Modifier.size(80.dp).align(Alignment.TopEnd)
             )
             Column {
-                Text("YOUR HOURLY RATE", fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.label_hourly_rate), fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                Text("USD", fontSize = 12.sp, color = Color.Gray)
+
+                Text(baseCurrencyCode, fontSize = 12.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatCurrency(hourly.usd), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                    Text(" / hour", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(formatCurrency(hourly.base), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                    Text(stringResource(R.string.label_per_hour), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
                 }
-                
+
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.LightGray)
-                
-                Text("MXN", fontSize = 12.sp, color = Color.Gray)
+
+                Text(targetCurrencyCode, fontSize = 12.sp, color = Color.Gray)
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text(formatCurrency(hourly.mxn), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
-                    Text(" / hora", fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(formatCurrency(hourly.target), fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black)
+                    Text(stringResource(R.string.label_per_hour), fontSize = 16.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 6.dp))
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Settings, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Based on $annualHours annual hours", fontSize = 12.sp, color = Color.Gray)
+                    Text(stringResource(R.string.label_based_on_hours, annualHours), fontSize = 12.sp, color = Color.Gray)
                 }
             }
         }
@@ -145,7 +150,7 @@ fun HourlyRateCard(hourly: CurrencyPair, annualHours: Int) {
 }
 
 @Composable
-fun ResultCard(label: String, pair: CurrencyPair) {
+fun ResultCard(label: String, pair: CurrencyPair, baseCurrencyCode: String, targetCurrencyCode: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -155,14 +160,14 @@ fun ResultCard(label: String, pair: CurrencyPair) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(label, fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
-            
-            Text("USD", fontSize = 10.sp, color = Color.Gray)
-            Text(formatCurrency(pair.usd), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-            
+
+            Text(baseCurrencyCode, fontSize = 10.sp, color = Color.Gray)
+            Text(formatCurrency(pair.base), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+
             Spacer(modifier = Modifier.height(8.dp))
-            
-            Text("MXN", fontSize = 10.sp, color = Color.Gray)
-            Text(formatCurrency(pair.mxn), fontSize = 14.sp, color = Color.Gray)
+
+            Text(targetCurrencyCode, fontSize = 10.sp, color = Color.Gray)
+            Text(formatCurrency(pair.target), fontSize = 14.sp, color = Color.Gray)
         }
     }
 }
@@ -194,7 +199,12 @@ fun ConverterScreenDarkPreview() {
 fun HourlyRateCardPreview() {
     WageCalculatorTheme {
         Surface {
-            HourlyRateCard(hourly = CurrencyPair(usd = 28.85, mxn = 533.72), annualHours = 2080)
+            HourlyRateCard(
+                hourly = CurrencyPair(base = 28.85, target = 533.72),
+                annualHours = 2080,
+                baseCurrencyCode = "USD",
+                targetCurrencyCode = "MXN"
+            )
         }
     }
 }
@@ -204,7 +214,12 @@ fun HourlyRateCardPreview() {
 fun ResultCardPreview() {
     WageCalculatorTheme {
         Surface {
-            ResultCard(label = "MONTHLY", pair = CurrencyPair(usd = 5000.0, mxn = 92500.0))
+            ResultCard(
+                label = "MONTHLY",
+                pair = CurrencyPair(base = 5000.0, target = 92500.0),
+                baseCurrencyCode = "USD",
+                targetCurrencyCode = "MXN"
+            )
         }
     }
 }
