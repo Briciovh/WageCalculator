@@ -1,26 +1,33 @@
 package com.softeen.wagecalculator.data.model
 
+import androidx.annotation.StringRes
+import com.softeen.wagecalculator.R
+
 enum class Currency(val symbol: String, val code: String) {
-    USD("$", "USD"),
-    MXN("$", "MXN")
+    USD("$",   "USD"), CAD("C$",  "CAD"), MXN("$",   "MXN"),
+    BRL("R$",  "BRL"), ARS("$",   "ARS"), COP("$",   "COP"),
+    CLP("$",   "CLP"), PEN("S/",  "PEN"), GTQ("Q",   "GTQ"),
+    CRC("₡",   "CRC"), DOP("$",   "DOP"), BOB("Bs.", "BOB"),
+    UYU("\$U", "UYU"), HNL("L",   "HNL"), TTD("$",   "TTD")
 }
 
-enum class Frequency(val label: String) {
-    YEARLY("yearly"),
-    MONTHLY("monthly"),
-    BI_WEEKLY("bi-weekly"),
-    WEEKLY("weekly"),
-    DAILY("daily"),
-    HOURLY("hourly")
+enum class Frequency(@param:StringRes val labelRes: Int) {
+    YEARLY(R.string.frequency_yearly),
+    MONTHLY(R.string.frequency_monthly),
+    BI_WEEKLY(R.string.frequency_bi_weekly),
+    WEEKLY(R.string.frequency_weekly),
+    DAILY(R.string.frequency_daily),
+    HOURLY(R.string.frequency_hourly)
 }
 
 data class SalaryConfig(
     val baseCurrency: Currency = Currency.USD,
+    val targetCurrency: Currency = Currency.MXN,
     val inputAmount: Double = 60000.0,
     val inputFrequency: Frequency = Frequency.YEARLY,
     val hoursPerWeek: Int = 40,
     val weeksPerYear: Int = 52,
-    val exchangeRate: Double = 18.5 // 1 USD to MXN
+    val exchangeRate: Double = 1.0
 ) {
     val annualHours: Int
         get() = hoursPerWeek * weeksPerYear
@@ -48,6 +55,6 @@ data class SalaryResults(
 )
 
 data class CurrencyPair(
-    val usd: Double,
-    val mxn: Double
+    val base: Double,
+    val target: Double
 )
