@@ -131,6 +131,36 @@ class SalaryViewModelTest {
     }
 
     @Test
+    fun cachedRate_appliedImmediatelyBeforeFetchCompletes() = runTest {
+        repo.cacheRate("CAD", "MXN", 13.5)
+        exchangeRepo.pendingResponse = CompletableDeferred()
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertEquals(13.5, viewModel.config.value.exchangeRate, 0.001)
+        exchangeRepo.pendingResponse!!.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun cachedRate_noLoadingIndicator() = runTest {
+        repo.cacheRate("CAD", "MXN", 13.5)
+        exchangeRepo.pendingResponse = CompletableDeferred()
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertFalse(viewModel.isLoadingRate.value)
+        exchangeRepo.pendingResponse!!.complete(Unit)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun successfulFetch_storesRateInCache() = runTest {
+        exchangeRepo.rateToReturn = 17.5
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertEquals(17.5, repo.getCachedRate("CAD", "MXN")!!, 0.001)
+    }
+
+    @Test
     fun results_calculatedCorrectlyForAllFrequencies() {
         viewModel.updateConfig {
             it.copy(
