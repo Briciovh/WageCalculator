@@ -3,12 +3,18 @@ package com.softeen.wagecalculator.ui
 import com.softeen.wagecalculator.data.model.Currency
 import com.softeen.wagecalculator.data.model.Frequency
 import com.softeen.wagecalculator.data.model.SalaryConfig
+import com.softeen.wagecalculator.fake.FakeExchangeRateRepository
 import com.softeen.wagecalculator.fake.FakeSalaryConfigRepository
 import com.softeen.wagecalculator.util.MainDispatcherRule
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -20,19 +26,21 @@ class SalaryViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var repo: FakeSalaryConfigRepository
+    private lateinit var exchangeRepo: FakeExchangeRateRepository
     private lateinit var viewModel: SalaryViewModel
 
     @Before
     fun setup() {
         repo = FakeSalaryConfigRepository()
-        viewModel = SalaryViewModel(repo)
+        exchangeRepo = FakeExchangeRateRepository()
+        viewModel = SalaryViewModel(repo, exchangeRepo)
     }
 
     @Test
     fun init_loadsConfigFromRepository() = runTest {
         val custom = SalaryConfig(inputAmount = 120_000.0)
         repo.setInitialConfig(custom)
-        val vm = SalaryViewModel(repo)
+        val vm = SalaryViewModel(repo, exchangeRepo)
         advanceUntilIdle()
         assertEquals(120_000.0, vm.config.value.inputAmount, 0.01)
     }
@@ -51,17 +59,26 @@ class SalaryViewModelTest {
     }
 
     @Test
-    fun currencyChange_baseCurrency_resetsExchangeRate() {
-        viewModel.updateConfig { it.copy(exchangeRate = 18.5) }
-        viewModel.updateConfig { it.copy(baseCurrency = Currency.BRL) }
-        assertEquals(1.0, viewModel.config.value.exchangeRate, 0.001)
+    fun currencyChange_triggersExchangeRateFetch() = runTest {
+        exchangeRepo.rateToReturn = 17.5
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        
+        // Use TestCoroutineScheduler directly via advanceUntilIdle
+        advanceUntilIdle()
+        
+        assertEquals(17.5, viewModel.config.value.exchangeRate, 0.001)
+        assertEquals("CAD", exchangeRepo.lastBase)
+        assertEquals("MXN", exchangeRepo.lastTarget)
     }
 
     @Test
-    fun currencyChange_targetCurrency_resetsExchangeRate() {
-        viewModel.updateConfig { it.copy(exchangeRate = 18.5) }
-        viewModel.updateConfig { it.copy(targetCurrency = Currency.CAD) }
+    fun sameCurrency_setsExchangeRateToOneWithoutFetch() = runTest {
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.USD, targetCurrency = Currency.USD) }
+        advanceUntilIdle()
+        
         assertEquals(1.0, viewModel.config.value.exchangeRate, 0.001)
+        // lastBase/lastTarget should still be null if no fetch was triggered
+        assertEquals(null, exchangeRepo.lastBase)
     }
 
     @Test
@@ -69,6 +86,48 @@ class SalaryViewModelTest {
         viewModel.updateConfig { it.copy(exchangeRate = 18.5) }
         viewModel.updateConfig { it.copy(inputAmount = 70_000.0) }
         assertEquals(18.5, viewModel.config.value.exchangeRate, 0.001)
+    }
+
+    @Test
+    fun currencyChange_setsLoadingTrue() = runTest {
+        exchangeRepo.pendingResponse = CompletableDeferred()
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        assertTrue(viewModel.isLoadingRate.value)
+        exchangeRepo.pendingResponse!!.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(viewModel.isLoadingRate.value)
+    }
+
+    @Test
+    fun successfulFetch_clearsLoadingAndError() = runTest {
+        exchangeRepo.rateToReturn = 17.5
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertFalse(viewModel.isLoadingRate.value)
+        assertNull(viewModel.rateError.value)
+    }
+
+    @Test
+    fun failedFetch_clearsLoadingAndSetsError() = runTest {
+        exchangeRepo.shouldFail = true
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertFalse(viewModel.isLoadingRate.value)
+        assertNotNull(viewModel.rateError.value)
+    }
+
+    @Test
+    fun newFetch_clearsErrorFromPreviousFetch() = runTest {
+        exchangeRepo.shouldFail = true
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.CAD, targetCurrency = Currency.MXN) }
+        advanceUntilIdle()
+        assertNotNull(viewModel.rateError.value)
+
+        exchangeRepo.shouldFail = false
+        exchangeRepo.rateToReturn = 1.3
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.USD, targetCurrency = Currency.CAD) }
+        advanceUntilIdle()
+        assertNull(viewModel.rateError.value)
     }
 
     @Test

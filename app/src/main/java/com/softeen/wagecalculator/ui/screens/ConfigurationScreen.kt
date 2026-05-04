@@ -37,8 +37,12 @@ fun ConfigurationRoute(
     onNavigateBack: () -> Unit
 ) {
     val config by viewModel.config.collectAsState()
+    val isLoadingRate by viewModel.isLoadingRate.collectAsState()
+    val rateError by viewModel.rateError.collectAsState()
     ConfigurationScreen(
         config = config,
+        isLoadingRate = isLoadingRate,
+        rateError = rateError,
         onUpdateConfig = viewModel::updateConfig,
         onNavigateBack = onNavigateBack
     )
@@ -50,12 +54,17 @@ fun ConfigurationRoute(
 @Composable
 fun ConfigurationScreen(
     config: SalaryConfig,
+    isLoadingRate: Boolean,
+    rateError: String?,
     onUpdateConfig: ((SalaryConfig) -> SalaryConfig) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     var inputAmountText by remember { mutableStateOf(config.inputAmount.formatDecimal()) }
     var exchangeRateText by remember(config.baseCurrency, config.targetCurrency) {
-        mutableStateOf(config.exchangeRate.formatDecimal())
+        mutableStateOf(config.exchangeRate.formatRate())
+    }
+    LaunchedEffect(config.exchangeRate) {
+        exchangeRateText = config.exchangeRate.formatRate()
     }
 
     Scaffold(
@@ -178,11 +187,22 @@ fun ConfigurationScreen(
 
             // Exchange Rate
             Column {
-                Text(
-                    stringResource(R.string.label_exchange_rate, config.baseCurrency.code, config.targetCurrency.code),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.label_exchange_rate, config.baseCurrency.code, config.targetCurrency.code),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    if (isLoadingRate) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 val step = when {
                     config.exchangeRate < 2.0 -> 0.01
@@ -193,7 +213,7 @@ fun ConfigurationScreen(
                     IconButton(onClick = {
                         val newRate = (config.exchangeRate - step).coerceAtLeast(0.0001)
                         onUpdateConfig { it.copy(exchangeRate = newRate) }
-                        exchangeRateText = newRate.formatDecimal()
+                        exchangeRateText = newRate.formatRate()
                     }) {
                         Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease_rate))
                     }
@@ -214,10 +234,18 @@ fun ConfigurationScreen(
                     IconButton(onClick = {
                         val newRate = config.exchangeRate + step
                         onUpdateConfig { it.copy(exchangeRate = newRate) }
-                        exchangeRateText = newRate.formatDecimal()
+                        exchangeRateText = newRate.formatRate()
                     }) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase_rate))
                     }
+                }
+                if (rateError != null) {
+                    Text(
+                        rateError,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
 
@@ -291,6 +319,8 @@ private fun CurrencyDropdown(
 private fun Double.formatDecimal(): String =
     "%.8f".format(this).trimEnd('0').trimEnd('.')
 
+private fun Double.formatRate(): String = "%.2f".format(this)
+
 // — Previews —
 
 @Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen")
@@ -299,6 +329,36 @@ fun ConfigurationScreenPreview() {
     WageCalculatorTheme {
         ConfigurationScreen(
             config = SalaryConfig(),
+            isLoadingRate = false,
+            rateError = null,
+            onUpdateConfig = { _ -> },
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen – Loading")
+@Composable
+fun ConfigurationScreenLoadingPreview() {
+    WageCalculatorTheme {
+        ConfigurationScreen(
+            config = SalaryConfig(),
+            isLoadingRate = true,
+            rateError = null,
+            onUpdateConfig = { _ -> },
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen – Error")
+@Composable
+fun ConfigurationScreenErrorPreview() {
+    WageCalculatorTheme {
+        ConfigurationScreen(
+            config = SalaryConfig(),
+            isLoadingRate = false,
+            rateError = "Rate for ARS not found in response",
             onUpdateConfig = { _ -> },
             onNavigateBack = {}
         )
