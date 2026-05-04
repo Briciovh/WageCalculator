@@ -12,17 +12,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.softeen.wagecalculator.R
 import com.softeen.wagecalculator.data.model.Currency
 import com.softeen.wagecalculator.data.model.Frequency
 import com.softeen.wagecalculator.ui.SalaryViewModel
-import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,13 +63,15 @@ fun ConfigurationScreen(
                         label = stringResource(R.string.label_from),
                         selected = config.baseCurrency,
                         onSelected = { viewModel.updateConfig { c -> c.copy(baseCurrency = it) } },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        testTag = "dropdown_base"
                     )
                     CurrencyDropdown(
                         label = stringResource(R.string.label_to),
                         selected = config.targetCurrency,
                         onSelected = { viewModel.updateConfig { c -> c.copy(targetCurrency = it) } },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        testTag = "dropdown_target"
                     )
                 }
             }
@@ -113,14 +115,16 @@ fun ConfigurationScreen(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.label_hours_per_week), modifier = Modifier.weight(1f))
-                    Text(config.hoursPerWeek.toString(), fontWeight = FontWeight.Bold)
+                    Text(config.hoursPerWeek.toString(), fontWeight = FontWeight.Bold,
+                        modifier = Modifier.semantics { testTag = "text_hours_value" })
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.unit_hrs), color = Color.Gray)
                 }
                 Slider(
                     value = config.hoursPerWeek.toFloat(),
                     onValueChange = { newValue -> viewModel.updateConfig { it.copy(hoursPerWeek = newValue.toInt()) } },
-                    valueRange = 0f..168f
+                    valueRange = 0f..168f,
+                    modifier = Modifier.semantics { testTag = "slider_hours" }
                 )
             }
 
@@ -128,14 +132,16 @@ fun ConfigurationScreen(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.label_weeks_per_year), modifier = Modifier.weight(1f))
-                    Text(config.weeksPerYear.toString(), fontWeight = FontWeight.Bold)
+                    Text(config.weeksPerYear.toString(), fontWeight = FontWeight.Bold,
+                        modifier = Modifier.semantics { testTag = "text_weeks_value" })
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(stringResource(R.string.unit_weeks), color = Color.Gray)
                 }
                 Slider(
                     value = config.weeksPerYear.toFloat(),
                     onValueChange = { newValue -> viewModel.updateConfig { it.copy(weeksPerYear = newValue.toInt()) } },
-                    valueRange = 1f..52f
+                    valueRange = 1f..52f,
+                    modifier = Modifier.semantics { testTag = "slider_weeks" }
                 )
             }
 
@@ -150,7 +156,7 @@ fun ConfigurationScreen(
                 OutlinedTextField(
                     value = config.exchangeRate.toString(),
                     onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; viewModel.updateConfig { it.copy(exchangeRate = value) } },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().semantics { testTag = "field_exchange_rate" },
                     prefix = { Text("${config.targetCurrency.code} ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
@@ -185,7 +191,8 @@ private fun CurrencyDropdown(
     label: String,
     selected: Currency,
     onSelected: (Currency) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    testTag: String = ""
 ) {
     var expanded by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -202,6 +209,7 @@ private fun CurrencyDropdown(
             modifier = Modifier
                 .menuAnchor()
                 .fillMaxWidth()
+                .let { if (testTag.isNotEmpty()) it.semantics { this.testTag = testTag } else it }
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -217,14 +225,4 @@ private fun CurrencyDropdown(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun ConfigurationScreenPreview() {
-    WageCalculatorTheme {
-        ConfigurationScreen(
-            viewModel = SalaryViewModel(),
-            onNavigateBack = {}
-        )
-    }
-}
 

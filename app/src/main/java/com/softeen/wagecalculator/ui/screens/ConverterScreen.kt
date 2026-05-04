@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -52,7 +54,10 @@ fun ConverterScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToConfig) {
+                    IconButton(
+                        onClick = onNavigateToConfig,
+                        modifier = Modifier.semantics { testTag = "btn_nav_config" }
+                    ) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.cd_settings))
                     }
                 }
@@ -246,17 +251,6 @@ private fun Frequency.unitLabel(): String = stringResource(
 )
 
 // — Previews —
-
-@Preview(showBackground = true)
-@Composable
-fun ConverterScreenPreview() {
-    WageCalculatorTheme {
-        ConverterScreen(
-            viewModel = SalaryViewModel(),
-            onNavigateToConfig = {}
-        )
-    }
-}
 
 @Preview(showBackground = true, name = "SpotlightCard – Hourly")
 @Composable

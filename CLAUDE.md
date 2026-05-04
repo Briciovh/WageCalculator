@@ -57,8 +57,24 @@ SalaryConfig (state) → SalaryViewModel → SalaryResults (derived state)
 - `WageCalculatorApp` — `@HiltAndroidApp`
 - `MainActivity` — `@AndroidEntryPoint`
 - `SalaryViewModel` — `@HiltViewModel` + `@Inject constructor()`
-- Screen-level `@Preview` functions are removed; only stateless component previews (`SpotlightCard`, `ResultCard`) exist.
+- `@Preview` functions exist for stateless components (`SpotlightCard`, `ResultCard`) and must be kept. Do not remove them.
 
 ### String resources (`res/values/strings.xml`)
 
 All user-visible strings live here — no inline string literals in composables. Dynamic strings use printf-style format args (`%1$s`, `%1$d`). Currency codes and symbols are not in strings.xml (they are ISO identifiers, not display copy).
+
+## Rules
+
+### Dependency versions — no silent downgrades
+Never downgrade a library or plugin version unless the downgrade is strictly necessary to resolve a conflict **and** the user has explicitly confirmed it. If a version conflict arises, propose the resolution and wait for approval before changing any version numbers.
+
+### Composable previews — never delete
+`@Preview` functions are required on all composable components and must not be removed. Do not delete, comment out, or otherwise disable existing `@Preview` functions. If a preview stops compiling after a refactor, fix it — do not remove it.
+
+### After every code change — sync, build, test
+After finishing any code change, run the following three steps in order and report the results:
+1. **Gradle sync** — `./gradlew --dry-run` (or trigger sync via the IDE)
+2. **Build** — `./gradlew assembleDebug`
+3. **Unit tests** — `./gradlew test`
+
+Do not report a task as complete until all three steps pass without errors.
