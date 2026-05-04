@@ -6,7 +6,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,6 +53,11 @@ fun ConfigurationScreen(
     onUpdateConfig: ((SalaryConfig) -> SalaryConfig) -> Unit,
     onNavigateBack: () -> Unit
 ) {
+    var inputAmountText by remember { mutableStateOf(config.inputAmount.formatDecimal()) }
+    var exchangeRateText by remember(config.baseCurrency, config.targetCurrency) {
+        mutableStateOf(config.exchangeRate.formatDecimal())
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -122,11 +129,16 @@ fun ConfigurationScreen(
                     }
                 }
                 OutlinedTextField(
-                    value = config.inputAmount.toString(),
-                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; onUpdateConfig { it.copy(inputAmount = value) } },
+                    value = inputAmountText,
+                    onValueChange = { input ->
+                        inputAmountText = input
+                        input.toDoubleOrNull()?.let { value ->
+                            onUpdateConfig { it.copy(inputAmount = value) }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     prefix = { Text("${config.baseCurrency.symbol} ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
 
@@ -172,13 +184,41 @@ fun ConfigurationScreen(
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = config.exchangeRate.toString(),
-                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; onUpdateConfig { it.copy(exchangeRate = value) } },
-                    modifier = Modifier.fillMaxWidth().semantics { testTag = "field_exchange_rate" },
-                    prefix = { Text("${config.targetCurrency.code} ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                )
+                val step = when {
+                    config.exchangeRate < 2.0 -> 0.01
+                    config.exchangeRate < 20.0 -> 0.1
+                    else -> 1.0
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        val newRate = (config.exchangeRate - step).coerceAtLeast(0.0001)
+                        onUpdateConfig { it.copy(exchangeRate = newRate) }
+                        exchangeRateText = newRate.formatDecimal()
+                    }) {
+                        Icon(Icons.Default.Remove, contentDescription = stringResource(R.string.cd_decrease_rate))
+                    }
+                    OutlinedTextField(
+                        value = exchangeRateText,
+                        onValueChange = { input ->
+                            exchangeRateText = input
+                            input.toDoubleOrNull()?.let { value ->
+                                onUpdateConfig { it.copy(exchangeRate = value) }
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .semantics { testTag = "field_exchange_rate" },
+                        prefix = { Text("${config.targetCurrency.code} ") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    )
+                    IconButton(onClick = {
+                        val newRate = config.exchangeRate + step
+                        onUpdateConfig { it.copy(exchangeRate = newRate) }
+                        exchangeRateText = newRate.formatDecimal()
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.cd_increase_rate))
+                    }
+                }
             }
 
             // Pro Tip
@@ -245,6 +285,11 @@ private fun CurrencyDropdown(
         }
     }
 }
+
+// — Helpers —
+
+private fun Double.formatDecimal(): String =
+    "%.8f".format(this).trimEnd('0').trimEnd('.')
 
 // — Previews —
 
