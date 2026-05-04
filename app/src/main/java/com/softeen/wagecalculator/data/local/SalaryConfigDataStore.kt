@@ -13,6 +13,7 @@ import com.softeen.wagecalculator.data.model.SalaryConfig
 import com.softeen.wagecalculator.data.repository.SalaryConfigRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -54,5 +55,15 @@ class SalaryConfigDataStore @Inject constructor(
             prefs[KEY_WEEKS_PER_YEAR]  = config.weeksPerYear
             prefs[KEY_EXCHANGE_RATE]   = config.exchangeRate
         }
+    }
+
+    override suspend fun getCachedRate(base: String, quote: String): Double? {
+        val key = doublePreferencesKey("rate_${base}_${quote}")
+        return dataStore.data.first()[key]
+    }
+
+    override suspend fun cacheRate(base: String, quote: String, rate: Double) {
+        val key = doublePreferencesKey("rate_${base}_${quote}")
+        dataStore.edit { prefs -> prefs[key] = rate }
     }
 }

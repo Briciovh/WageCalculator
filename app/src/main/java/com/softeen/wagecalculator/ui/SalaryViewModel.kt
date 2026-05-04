@@ -60,7 +60,6 @@ class SalaryViewModel @Inject constructor(
                 } else {
                     val configWithResetRate = new.copy(exchangeRate = 1.0)
                     _results.value = calculateResults(configWithResetRate)
-                    viewModelScope.launch { repository.save(configWithResetRate) }
                     fetchArgs = Pair(new.baseCurrency.code, new.targetCurrency.code)
                     configWithResetRate
                 }
@@ -70,13 +69,37 @@ class SalaryViewModel @Inject constructor(
                 new
             }
         }
-        fetchArgs?.let { (base, target) -> fetchExchangeRate(base, target) }
+        fetchArgs?.let { (base, target) ->
+            viewModelScope.launch {
+                val cachedRate = repository.getCachedRate(base, target)
+                if (cachedRate != null) {
+                    _config.update { current ->
+                        if (current.baseCurrency.code == base && current.targetCurrency.code == target) {
+                            val cached = current.copy(exchangeRate = cachedRate)
+                            _results.value = calculateResults(cached)
+                            viewModelScope.launch { repository.save(cached) }
+                            cached
+                        } else current
+                    }
+                } else {
+                    _config.update { current ->
+                        if (current.baseCurrency.code == base && current.targetCurrency.code == target) {
+                            viewModelScope.launch { repository.save(current) }
+                            current
+                        } else current
+                    }
+                }
+                fetchExchangeRate(base, target, showLoading = cachedRate == null)
+            }
+        }
     }
 
-    private fun fetchExchangeRate(base: String, target: String) {
+    private fun fetchExchangeRate(base: String, target: String, showLoading: Boolean = true) {
         rateFetchJob?.cancel()
-        _isLoadingRate.value = true
-        _rateError.value = null
+        if (showLoading) {
+            _isLoadingRate.value = true
+            _rateError.value = null
+        }
         rateFetchJob = viewModelScope.launch {
             exchangeRateRepository.getExchangeRate(base, target)
                 .onSuccess { rate ->
@@ -84,15 +107,20 @@ class SalaryViewModel @Inject constructor(
                         if (current.baseCurrency.code == base && current.targetCurrency.code == target) {
                             val final = current.copy(exchangeRate = rate)
                             _results.value = calculateResults(final)
-                            viewModelScope.launch { repository.save(final) }
+                            viewModelScope.launch {
+                                repository.save(final)
+                                repository.cacheRate(base, target, rate)
+                            }
                             final
                         } else current
                     }
-                    _isLoadingRate.value = false
+                    if (showLoading) _isLoadingRate.value = false
                 }
                 .onFailure { e ->
-                    _isLoadingRate.value = false
-                    _rateError.value = e.message ?: "Failed to fetch exchange rate"
+                    if (showLoading) {
+                        _isLoadingRate.value = false
+                        _rateError.value = e.message ?: "Failed to fetch exchange rate"
+                    }
                 }
         }
     }
