@@ -12,26 +12,45 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.softeen.wagecalculator.R
 import com.softeen.wagecalculator.data.model.Currency
 import com.softeen.wagecalculator.data.model.Frequency
+import com.softeen.wagecalculator.data.model.SalaryConfig
 import com.softeen.wagecalculator.ui.SalaryViewModel
+import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+// — Route (stateful) —
+
 @Composable
-fun ConfigurationScreen(
+fun ConfigurationRoute(
     viewModel: SalaryViewModel,
     onNavigateBack: () -> Unit
 ) {
     val config by viewModel.config.collectAsState()
+    ConfigurationScreen(
+        config = config,
+        onUpdateConfig = viewModel::updateConfig,
+        onNavigateBack = onNavigateBack
+    )
+}
 
+// — Screen (stateless, previewable) —
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConfigurationScreen(
+    config: SalaryConfig,
+    onUpdateConfig: ((SalaryConfig) -> SalaryConfig) -> Unit,
+    onNavigateBack: () -> Unit
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -62,14 +81,14 @@ fun ConfigurationScreen(
                     CurrencyDropdown(
                         label = stringResource(R.string.label_from),
                         selected = config.baseCurrency,
-                        onSelected = { viewModel.updateConfig { c -> c.copy(baseCurrency = it) } },
+                        onSelected = { onUpdateConfig { c -> c.copy(baseCurrency = it) } },
                         modifier = Modifier.weight(1f),
                         testTag = "dropdown_base"
                     )
                     CurrencyDropdown(
                         label = stringResource(R.string.label_to),
                         selected = config.targetCurrency,
-                        onSelected = { viewModel.updateConfig { c -> c.copy(targetCurrency = it) } },
+                        onSelected = { onUpdateConfig { c -> c.copy(targetCurrency = it) } },
                         modifier = Modifier.weight(1f),
                         testTag = "dropdown_target"
                     )
@@ -94,7 +113,7 @@ fun ConfigurationScreen(
                                 DropdownMenuItem(
                                     text = { Text(stringResource(freq.labelRes)) },
                                     onClick = {
-                                        viewModel.updateConfig { it.copy(inputFrequency = freq) }
+                                        onUpdateConfig { it.copy(inputFrequency = freq) }
                                         expanded = false
                                     }
                                 )
@@ -104,7 +123,7 @@ fun ConfigurationScreen(
                 }
                 OutlinedTextField(
                     value = config.inputAmount.toString(),
-                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; viewModel.updateConfig { it.copy(inputAmount = value) } },
+                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; onUpdateConfig { it.copy(inputAmount = value) } },
                     modifier = Modifier.fillMaxWidth(),
                     prefix = { Text("${config.baseCurrency.symbol} ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -122,7 +141,7 @@ fun ConfigurationScreen(
                 }
                 Slider(
                     value = config.hoursPerWeek.toFloat(),
-                    onValueChange = { newValue -> viewModel.updateConfig { it.copy(hoursPerWeek = newValue.toInt()) } },
+                    onValueChange = { newValue -> onUpdateConfig { it.copy(hoursPerWeek = newValue.toInt()) } },
                     valueRange = 0f..168f,
                     modifier = Modifier.semantics { testTag = "slider_hours" }
                 )
@@ -139,7 +158,7 @@ fun ConfigurationScreen(
                 }
                 Slider(
                     value = config.weeksPerYear.toFloat(),
-                    onValueChange = { newValue -> viewModel.updateConfig { it.copy(weeksPerYear = newValue.toInt()) } },
+                    onValueChange = { newValue -> onUpdateConfig { it.copy(weeksPerYear = newValue.toInt()) } },
                     valueRange = 1f..52f,
                     modifier = Modifier.semantics { testTag = "slider_weeks" }
                 )
@@ -155,7 +174,7 @@ fun ConfigurationScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = config.exchangeRate.toString(),
-                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; viewModel.updateConfig { it.copy(exchangeRate = value) } },
+                    onValueChange = { val value = it.toDoubleOrNull() ?: 0.0; onUpdateConfig { it.copy(exchangeRate = value) } },
                     modifier = Modifier.fillMaxWidth().semantics { testTag = "field_exchange_rate" },
                     prefix = { Text("${config.targetCurrency.code} ") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
@@ -184,6 +203,8 @@ fun ConfigurationScreen(
         }
     }
 }
+
+// — Components —
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -225,4 +246,16 @@ private fun CurrencyDropdown(
     }
 }
 
+// — Previews —
 
+@Preview(showBackground = true, showSystemUi = true, name = "ConfigurationScreen")
+@Composable
+fun ConfigurationScreenPreview() {
+    WageCalculatorTheme {
+        ConfigurationScreen(
+            config = SalaryConfig(),
+            onUpdateConfig = { _ -> },
+            onNavigateBack = {}
+        )
+    }
+}

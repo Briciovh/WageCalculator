@@ -72,25 +72,38 @@ class SalaryViewModelTest {
     }
 
     @Test
-    fun results_targetIsBaseTimesExchangeRate() {
+    fun results_calculatedCorrectlyForAllFrequencies() {
         viewModel.updateConfig {
-            it.copy(inputAmount = 60_000.0, inputFrequency = Frequency.YEARLY, exchangeRate = 2.0)
+            it.copy(
+                inputAmount = 60_000.0,
+                inputFrequency = Frequency.YEARLY,
+                hoursPerWeek = 40,
+                weeksPerYear = 52,
+                exchangeRate = 20.0
+            )
         }
-        val yearly = viewModel.results.value.yearly
-        assertEquals(yearly.base * 2.0, yearly.target, 0.01)
-    }
+        val res = viewModel.results.value
 
-    @Test
-    fun results_monthlyIsYearlyDividedBy12() {
-        viewModel.updateConfig { it.copy(inputAmount = 60_000.0, inputFrequency = Frequency.YEARLY) }
-        val results = viewModel.results.value
-        assertEquals(results.yearly.base / 12, results.monthly.base, 0.01)
-    }
+        // Yearly
+        assertEquals(60000.0, res.yearly.base, 0.01)
+        assertEquals(1200000.0, res.yearly.target, 0.01)
 
-    @Test
-    fun results_weeklyIsYearlyDividedBy52() {
-        viewModel.updateConfig { it.copy(inputAmount = 60_000.0, inputFrequency = Frequency.YEARLY) }
-        val results = viewModel.results.value
-        assertEquals(results.yearly.base / 52, results.weekly.base, 0.01)
+        // Monthly
+        assertEquals(5000.0, res.monthly.base, 0.01)
+        assertEquals(100000.0, res.monthly.target, 0.01)
+
+        // Bi-weekly (60000 / 26 = 2307.69)
+        assertEquals(2307.69, res.biWeekly.base, 0.01)
+
+        // Weekly (60000 / 52 = 1153.84)
+        assertEquals(1153.84, res.weekly.base, 0.01)
+
+        // Daily (60000 / (52 * 5) = 230.76)
+        assertEquals(230.76, res.daily.base, 0.01)
+
+        // Hourly (60000 / 2080 = 28.84)
+        assertEquals(28.84, res.hourly.base, 0.01)
+
+        assertEquals(2080, res.annualHours)
     }
 }

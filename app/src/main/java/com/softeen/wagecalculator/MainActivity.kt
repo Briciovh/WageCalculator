@@ -13,8 +13,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.softeen.wagecalculator.ui.SalaryViewModel
-import com.softeen.wagecalculator.ui.screens.ConfigurationScreen
-import com.softeen.wagecalculator.ui.screens.ConverterScreen
+import com.softeen.wagecalculator.ui.screens.ConfigurationRoute
+import com.softeen.wagecalculator.ui.screens.ConverterRoute
 import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 
 @AndroidEntryPoint
@@ -41,13 +41,13 @@ fun SalaryApp() {
         modifier = Modifier.fillMaxSize()
     ) {
         composable("converter") {
-            ConverterScreen(
+            ConverterRoute(
                 viewModel = viewModel,
                 onNavigateToConfig = { navController.navigate("config") }
             )
         }
         composable("config") {
-            ConfigurationScreen(
+            ConfigurationRoute(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

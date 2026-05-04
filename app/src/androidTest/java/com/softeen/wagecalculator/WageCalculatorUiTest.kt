@@ -45,6 +45,23 @@ class WageCalculatorUiTest {
     }
 
     @Test
+    fun results_switchingSpotlightPeriod() {
+        // Default spotlight is HOURLY
+        val hourlyTitle = composeRule.activity.getString(R.string.spotlight_title_hourly)
+        composeRule.onNodeWithTag("spotlight_card").onChildren()
+            .filterToOne(hasText(hourlyTitle)).assertExists()
+
+        // Tap Monthly result card
+        val monthlyLabel = composeRule.activity.getString(R.string.frequency_monthly)
+        composeRule.onNodeWithTag("result_card_$monthlyLabel").performClick()
+
+        // Spotlight should now be MONTHLY
+        val monthlyTitle = composeRule.activity.getString(R.string.spotlight_title_monthly)
+        composeRule.onNodeWithTag("spotlight_card").onChildren()
+            .filterToOne(hasText(monthlyTitle)).assertExists()
+    }
+
+    @Test
     fun sliders_stayWithinBounds() {
         composeRule.onNodeWithTag("btn_nav_config").performClick()
 

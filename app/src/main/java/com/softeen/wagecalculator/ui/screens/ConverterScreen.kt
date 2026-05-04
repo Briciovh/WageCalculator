@@ -15,9 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -25,15 +25,17 @@ import androidx.compose.ui.unit.sp
 import com.softeen.wagecalculator.R
 import com.softeen.wagecalculator.data.model.CurrencyPair
 import com.softeen.wagecalculator.data.model.Frequency
+import com.softeen.wagecalculator.data.model.SalaryConfig
 import com.softeen.wagecalculator.data.model.SalaryResults
 import com.softeen.wagecalculator.ui.SalaryViewModel
 import com.softeen.wagecalculator.ui.theme.WageCalculatorTheme
 import java.text.NumberFormat
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+// — Route (stateful) —
+
 @Composable
-fun ConverterScreen(
+fun ConverterRoute(
     viewModel: SalaryViewModel,
     onNavigateToConfig: () -> Unit
 ) {
@@ -41,6 +43,26 @@ fun ConverterScreen(
     val config by viewModel.config.collectAsState()
     var selectedPeriod by remember { mutableStateOf(Frequency.HOURLY) }
 
+    ConverterScreen(
+        results = results,
+        config = config,
+        selectedPeriod = selectedPeriod,
+        onPeriodSelected = { selectedPeriod = it },
+        onNavigateToConfig = onNavigateToConfig
+    )
+}
+
+// — Screen (stateless, previewable) —
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConverterScreen(
+    results: SalaryResults,
+    config: SalaryConfig,
+    selectedPeriod: Frequency,
+    onPeriodSelected: (Frequency) -> Unit,
+    onNavigateToConfig: () -> Unit
+) {
     val gridPeriods = Frequency.entries.filter { it != selectedPeriod }
 
     Scaffold(
@@ -101,7 +123,7 @@ fun ConverterScreen(
                         pair = results.pairFor(period),
                         baseCurrencyCode = config.baseCurrency.code,
                         targetCurrencyCode = config.targetCurrency.code,
-                        onClick = { selectedPeriod = period }
+                        onClick = { onPeriodSelected(period) }
                     )
                 }
 
@@ -125,6 +147,8 @@ fun ConverterScreen(
     }
 }
 
+// — Components —
+
 @Composable
 fun SpotlightCard(
     period: Frequency,
@@ -134,7 +158,7 @@ fun SpotlightCard(
     targetCurrencyCode: String
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics { testTag = "spotlight_card" },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -190,6 +214,7 @@ fun ResultCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .semantics { testTag = "result_card_$label" }
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -251,6 +276,28 @@ private fun Frequency.unitLabel(): String = stringResource(
 )
 
 // — Previews —
+
+@Preview(showBackground = true, showSystemUi = true, name = "ConverterScreen")
+@Composable
+fun ConverterScreenPreview() {
+    WageCalculatorTheme {
+        ConverterScreen(
+            results = SalaryResults(
+                hourly   = CurrencyPair(28.85, 533.72),
+                yearly   = CurrencyPair(60_000.0, 1_110_000.0),
+                monthly  = CurrencyPair(5_000.0, 92_500.0),
+                biWeekly = CurrencyPair(2_307.69, 42_692.31),
+                weekly   = CurrencyPair(1_153.85, 21_346.15),
+                daily    = CurrencyPair(230.77, 4_269.23),
+                annualHours = 2080
+            ),
+            config = SalaryConfig(),
+            selectedPeriod = Frequency.HOURLY,
+            onPeriodSelected = {},
+            onNavigateToConfig = {}
+        )
+    }
+}
 
 @Preview(showBackground = true, name = "SpotlightCard – Hourly")
 @Composable
