@@ -277,7 +277,7 @@ fun ConfigurationScreen(
             val context = LocalContext.current
             TextButton(
                 onClick = {
-                    val url = "https://github.com/[USUARIO]/[REPO]/blob/main/PRIVACY_POLICY.md"
+                    val url = "https://github.com/Briciovh/WageCalculator/blob/main/PRIVACY_POLICY.md"
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                     context.startActivity(intent)
                 },
