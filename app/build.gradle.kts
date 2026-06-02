@@ -19,10 +19,12 @@ android {
         minSdk = 24
         targetSdk = 36
         
-        val baseCode = project.findProperty("VERSION_CODE_BASE").toString().toIntOrNull() ?: 1
+        val baseCode = project.findProperty("VERSION_CODE_BASE")?.toString()?.toIntOrNull() ?: 1
         val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0
         versionCode = baseCode + buildNumber
-        versionName = project.findProperty("VERSION_NAME").toString()
+        
+        val baseName = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0"
+        versionName = if (buildNumber > 0) "$baseName.$buildNumber" else baseName
 
         testInstrumentationRunner = "com.softeen.wagecalculator.HiltTestRunner"
     }

@@ -23,6 +23,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Check Version
+        run: ./gradlew -q help -PprintVersion
+        # Note: This is a placeholder for a custom task if we had one, 
+        # but the important part is the build step below.
+
       - name: Build with Gradle
         run: ./gradlew bundleRelease
 
