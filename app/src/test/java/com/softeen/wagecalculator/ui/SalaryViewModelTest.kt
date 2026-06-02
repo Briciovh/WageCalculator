@@ -188,6 +188,69 @@ class SalaryViewModelTest {
     }
 
     @Test
+    fun startup_showsLoadingIndicatorDuringFetch() = runTest {
+        // Use a fresh repo with no cache so refreshStartupRate uses showLoading=true.
+        val freshRepo = FakeSalaryConfigRepository()
+        val freshExchange = FakeExchangeRateRepository().apply {
+            pendingResponse = CompletableDeferred()
+        }
+        val vm = SalaryViewModel(freshRepo, freshExchange)
+        // UnconfinedTestDispatcher runs the init coroutine eagerly; the fetch suspends at
+        // pendingResponse.await() leaving isLoadingRate = true.
+        assertTrue(vm.isLoadingRate.value)
+        freshExchange.pendingResponse!!.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(vm.isLoadingRate.value)
+    }
+
+    @Test
+    fun rapidCurrencyChange_cancelsInflightFetch() = runTest {
+        // First change: USD→CAD with a pending fetch that hangs.
+        val firstDeferred = CompletableDeferred<Unit>()
+        exchangeRepo.pendingResponse = firstDeferred
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.USD, targetCurrency = Currency.CAD) }
+        assertTrue(viewModel.isLoadingRate.value)  // fetch is suspended, no advanceUntilIdle needed
+
+        // Second change: USD→BRL cancels the in-flight CAD fetch.
+        exchangeRepo.pendingResponse = null
+        exchangeRepo.rateToReturn = 5.5
+        viewModel.updateConfig { it.copy(baseCurrency = Currency.USD, targetCurrency = Currency.BRL) }
+        advanceUntilIdle()
+
+        // Only the BRL rate should be reflected.
+        assertEquals(Currency.BRL, viewModel.config.value.targetCurrency)
+        assertEquals(5.5, viewModel.config.value.exchangeRate, 0.001)
+        assertFalse(viewModel.isLoadingRate.value)
+
+        // Completing the cancelled CAD deferred has no effect on state.
+        firstDeferred.complete(Unit)
+        advanceUntilIdle()
+        assertEquals(5.5, viewModel.config.value.exchangeRate, 0.001)
+    }
+
+    @Test
+    fun fetchedRate_updatesResultsStateFlow() = runTest {
+        exchangeRepo.rateToReturn = 20.0
+        viewModel.updateConfig {
+            it.copy(
+                baseCurrency = Currency.USD,
+                targetCurrency = Currency.CAD,
+                inputAmount = 60_000.0,
+                inputFrequency = Frequency.YEARLY,
+                hoursPerWeek = 40,
+                weeksPerYear = 52
+            )
+        }
+        advanceUntilIdle()
+
+        val res = viewModel.results.value
+        assertEquals(60_000.0,     res.yearly.base,   0.01)
+        assertEquals(1_200_000.0,  res.yearly.target, 0.01)  // 60000 * 20.0
+        assertEquals(5_000.0,      res.monthly.base,  0.01)
+        assertEquals(100_000.0,    res.monthly.target,0.01)
+    }
+
+    @Test
     fun results_calculatedCorrectlyForAllFrequencies() {
         viewModel.updateConfig {
             it.copy(

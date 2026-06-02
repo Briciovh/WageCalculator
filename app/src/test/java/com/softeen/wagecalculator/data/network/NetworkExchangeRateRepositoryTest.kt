@@ -70,4 +70,14 @@ class NetworkExchangeRateRepositoryTest {
 
         assertTrue(result.isFailure)
     }
+
+    @Test
+    fun getExchangeRate_emptyResponse() = runTest {
+        mockWebServer.enqueue(MockResponse().setBody("[]").setResponseCode(200))
+
+        val result = repository.getExchangeRate("USD", "MXN")
+
+        assertTrue(result.isFailure)
+        assertEquals("Rate for MXN not found in response", result.exceptionOrNull()?.message)
+    }
 }
