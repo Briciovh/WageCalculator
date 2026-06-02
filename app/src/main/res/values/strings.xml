@@ -33,6 +33,7 @@
     <string name="cd_increase_rate">Increase rate</string>
     <string name="label_pro_tip">Pro Tip</string>
     <string name="pro_tip_body">Most full-time roles assume 2,080 working hours per year (40 hrs/week × 52 weeks).</string>
+    <string name="label_privacy_policy">Política de Privacidad</string>
 
     <!-- Spotlight card titles -->
     <string name="spotlight_title_hourly">YOUR HOURLY RATE</string>

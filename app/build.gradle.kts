@@ -18,15 +18,19 @@ android {
         applicationId = "com.softeen.wagecalculator"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        
+        val baseCode = project.findProperty("VERSION_CODE_BASE").toString().toIntOrNull() ?: 1
+        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0
+        versionCode = baseCode + buildNumber
+        versionName = project.findProperty("VERSION_NAME").toString()
 
         testInstrumentationRunner = "com.softeen.wagecalculator.HiltTestRunner"
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -55,6 +59,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.datastore.preferences)

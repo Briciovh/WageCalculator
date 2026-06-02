@@ -50,7 +50,7 @@ SalaryConfigDataStore                                      │ results: StateFlo
 
 - **`Currency`** — enum of 15 American-continent currencies, each with `symbol` and `code`. Codes are ISO 4217 identifiers — not localizable, keep them in the enum.
 - **`Frequency`** — enum of 6 pay periods (`HOURLY` … `YEARLY`). Each entry holds a `@StringRes val labelRes` pointing to its display string.
-- **`SalaryConfig`** — user settings: `baseCurrency`, `targetCurrency`, `inputAmount`, `inputFrequency`, `hoursPerWeek`, `weeksPerYear`, `exchangeRate`. Exchange rate resets to `1.0` automatically when either currency changes. Has `annualHours` computed property and `calculateYearlyAmount()`.
+- **`SalaryConfig`** — user settings: `baseCurrency`, `targetCurrency`, `inputAmount`, `inputFrequency`, `hoursPerWeek`, `weeksPerYear`, `exchangeRate`. Exchange rate resets to `1.0` automatically when either currency changes. Has `annualHours` computed property and `calculateYearlyAmount()`. Note: `DAILY` conversion hardcodes 5 work days/week (`inputAmount * 5 * weeksPerYear`) — work days are not a configurable field.
 - **`CurrencyPair`** — `base: Double` and `target: Double` (not USD/MXN — generic).
 - **`SalaryResults`** — one `CurrencyPair` per period plus `annualHours`.
 
@@ -103,9 +103,27 @@ Each route is a stateful function that collects StateFlows and calls the corresp
 
 All user-visible strings live here — no inline string literals in composables. Dynamic strings use printf-style format args (`%1$s`, `%1$d`). Currency codes and symbols are not in strings.xml (they are ISO identifiers, not display copy).
 
-### Testing (`src/test/`)
+### Testing (`src/test/` and `src/androidTest/`)
 
 Unit tests use `FakeSalaryConfigRepository` and `FakeExchangeRateRepository` (in `fake/`) to isolate the ViewModel. `MainDispatcherRule` (in `util/`) is a JUnit rule that installs a `TestCoroutineDispatcher` for all tests. `NetworkExchangeRateRepositoryTest` uses MockWebServer.
+
+Instrumented tests live in `src/androidTest/`. `WageCalculatorUiTest` covers navigation, currency-change reset, spotlight-period switching, and slider bounds. It requires `HiltTestRunner` (configured in `build.gradle.kts`) — do not switch to the default Hilt test runner.
+
+Composables expose semantic test tags via `Modifier.semantics { testTag = "..." }`. Tags the UI tests depend on:
+
+| Tag | Location |
+|---|---|
+| `btn_nav_config` | Settings `IconButton` in `ConverterScreen` |
+| `spotlight_card` | `SpotlightCard` root `Card` |
+| `result_card_<label>` | `ResultCard` root `Card` (label = localized period string) |
+| `field_exchange_rate` | Exchange rate `TextField` in `ConfigurationScreen` |
+| `dropdown_base` | Base currency `ExposedDropdownMenuBox` |
+| `slider_hours` | Hours-per-week `Slider` |
+| `slider_weeks` | Weeks-per-year `Slider` |
+| `text_hours_value` | Hours display `Text` |
+| `text_weeks_value` | Weeks display `Text` |
+
+When refactoring composables, preserve these tags or update `WageCalculatorUiTest` to match.
 
 ## Rules
 
