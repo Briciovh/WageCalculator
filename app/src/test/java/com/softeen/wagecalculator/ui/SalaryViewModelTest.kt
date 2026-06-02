@@ -73,12 +73,39 @@ class SalaryViewModelTest {
 
     @Test
     fun sameCurrency_setsExchangeRateToOneWithoutFetch() = runTest {
+        advanceUntilIdle()           // drain startup fetch (USD→MXN)
+        exchangeRepo.lastBase = null // reset — isolate what the same-currency change does
+
         viewModel.updateConfig { it.copy(baseCurrency = Currency.USD, targetCurrency = Currency.USD) }
         advanceUntilIdle()
-        
+
         assertEquals(1.0, viewModel.config.value.exchangeRate, 0.001)
-        // lastBase/lastTarget should still be null if no fetch was triggered
         assertEquals(null, exchangeRepo.lastBase)
+    }
+
+    @Test
+    fun startup_fetchesRateWhenNoCacheExists() = runTest {
+        val freshExchange = FakeExchangeRateRepository().apply { rateToReturn = 17.5 }
+        val vm = SalaryViewModel(repo, freshExchange)
+        advanceUntilIdle()
+        assertEquals("USD", freshExchange.lastBase)
+        assertEquals("MXN", freshExchange.lastTarget)
+        assertEquals(17.5, vm.config.value.exchangeRate, 0.001)
+        assertFalse(vm.isLoadingRate.value)
+    }
+
+    @Test
+    fun startup_appliesCachedRateImmediately() = runTest {
+        repo.cacheRate("USD", "MXN", 17.5)
+        val freshExchange = FakeExchangeRateRepository().apply {
+            pendingResponse = CompletableDeferred()
+        }
+        val vm = SalaryViewModel(repo, freshExchange)
+        advanceUntilIdle()
+        assertEquals(17.5, vm.config.value.exchangeRate, 0.001)
+        assertFalse(vm.isLoadingRate.value)
+        freshExchange.pendingResponse!!.complete(Unit)
+        advanceUntilIdle()
     }
 
     @Test

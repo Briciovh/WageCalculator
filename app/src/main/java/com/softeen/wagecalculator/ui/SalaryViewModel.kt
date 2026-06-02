@@ -42,7 +42,26 @@ class SalaryViewModel @Inject constructor(
             val saved = repository.config.first()
             _config.value = saved
             _results.value = calculateResults(saved)
+            refreshStartupRate(saved)
         }
+    }
+
+    private suspend fun refreshStartupRate(saved: SalaryConfig) {
+        if (saved.baseCurrency == saved.targetCurrency) return
+        val base = saved.baseCurrency.code
+        val target = saved.targetCurrency.code
+        val cachedRate = repository.getCachedRate(base, target)
+        if (cachedRate != null) {
+            _config.update { current ->
+                if (current.baseCurrency.code == base && current.targetCurrency.code == target) {
+                    val withCache = current.copy(exchangeRate = cachedRate)
+                    _results.value = calculateResults(withCache)
+                    viewModelScope.launch { repository.save(withCache) }
+                    withCache
+                } else current
+            }
+        }
+        fetchExchangeRate(base, target, showLoading = cachedRate == null)
     }
 
     fun updateConfig(update: (SalaryConfig) -> SalaryConfig) {
