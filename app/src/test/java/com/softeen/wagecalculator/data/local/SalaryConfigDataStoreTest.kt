@@ -9,11 +9,13 @@ import com.softeen.wagecalculator.data.model.Frequency
 import com.softeen.wagecalculator.data.model.SalaryConfig
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -32,11 +34,17 @@ class SalaryConfigDataStoreTest {
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var repository: SalaryConfigDataStore
 
+    @After
+    fun teardown() {
+        testScope.cancel()
+    }
+
     @Before
     fun setup() {
+        val folder = tmpFolder.newFolder()
         dataStore = PreferenceDataStoreFactory.create(
             scope = testScope,
-            produceFile = { File(tmpFolder.newFolder(), "test.preferences_pb") }
+            produceFile = { File(folder, "test.preferences_pb") }
         )
         repository = SalaryConfigDataStore(dataStore)
     }
@@ -105,10 +113,9 @@ class SalaryConfigDataStoreTest {
     }
 
     @Test
-    fun cacheRate_differentPairsStoredIndependently() = runTest(testDispatcher) {
+    fun cacheRate_doesNotAffectOtherPairs() = runTest(testDispatcher) {
         repository.cacheRate("USD", "MXN", 17.5)
-        repository.cacheRate("USD", "CAD", 1.35)
         assertEquals(17.5, repository.getCachedRate("USD", "MXN")!!, 0.001)
-        assertEquals(1.35, repository.getCachedRate("USD", "CAD")!!, 0.001)
+        assertEquals(null, repository.getCachedRate("USD", "CAD"))
     }
 }

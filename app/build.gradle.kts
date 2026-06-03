@@ -19,12 +19,8 @@ android {
         minSdk = 24
         targetSdk = 36
         
-        val baseCode = project.findProperty("VERSION_CODE_BASE")?.toString()?.toIntOrNull() ?: 1
-        val buildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0
-        versionCode = baseCode + buildNumber
-        
-        val baseName = project.findProperty("VERSION_NAME")?.toString() ?: "1.0.0"
-        versionName = if (buildNumber > 0) "$baseName.$buildNumber" else baseName
+        versionCode = gitCommitCount()
+        versionName = gitVersionName()
 
         testInstrumentationRunner = "com.softeen.wagecalculator.HiltTestRunner"
     }
@@ -89,3 +85,21 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }
+
+fun gitCommitCount(): Int = try {
+    ProcessBuilder("git", "rev-list", "--count", "HEAD")
+        .directory(rootDir)
+        .redirectErrorStream(true)
+        .start()
+        .inputStream.bufferedReader().readText().trim()
+        .toIntOrNull() ?: 1
+} catch (_: Exception) { 1 }
+
+fun gitVersionName(): String = try {
+    ProcessBuilder("git", "describe", "--tags", "--always")
+        .directory(rootDir)
+        .redirectErrorStream(true)
+        .start()
+        .inputStream.bufferedReader().readText().trim()
+        .ifEmpty { "1.0.0" }
+} catch (_: Exception) { "1.0.0" }

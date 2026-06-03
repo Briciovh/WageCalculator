@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -25,15 +27,8 @@ jobs:
 
       - name: Print Version
         run: |
-          BASE_NAME=$(grep "^VERSION_NAME=" gradle.properties | cut -d= -f2)
-          BASE_CODE=$(grep "^VERSION_CODE_BASE=" gradle.properties | cut -d= -f2)
-          BUILD_NUM=${GITHUB_RUN_NUMBER:-0}
-          VERSION_CODE=$((BASE_CODE + BUILD_NUM))
-          if [ "$BUILD_NUM" -gt 0 ]; then
-            VERSION_NAME="$BASE_NAME.$BUILD_NUM"
-          else
-            VERSION_NAME="$BASE_NAME"
-          fi
+          VERSION_NAME=$(git describe --tags --always)
+          VERSION_CODE=$(git rev-list --count HEAD)
           echo "Building version: $VERSION_NAME (code: $VERSION_CODE)"
 
       - name: Run Unit Tests
