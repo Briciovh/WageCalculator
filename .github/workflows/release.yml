@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: set up JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -23,26 +23,27 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Check Version
-        run: ./gradlew -q help -PprintVersion
-        # Note: This is a placeholder for a custom task if we had one, 
-        # but the important part is the build step below.
+      - name: Print Version
+        run: |
+          BASE_NAME=$(grep "^VERSION_NAME=" gradle.properties | cut -d= -f2)
+          BASE_CODE=$(grep "^VERSION_CODE_BASE=" gradle.properties | cut -d= -f2)
+          BUILD_NUM=${GITHUB_RUN_NUMBER:-0}
+          VERSION_CODE=$((BASE_CODE + BUILD_NUM))
+          if [ "$BUILD_NUM" -gt 0 ]; then
+            VERSION_NAME="$BASE_NAME.$BUILD_NUM"
+          else
+            VERSION_NAME="$BASE_NAME"
+          fi
+          echo "Building version: $VERSION_NAME (code: $VERSION_CODE)"
 
-      - name: Build with Gradle
+      - name: Run Unit Tests
+        run: ./gradlew test
+
+      - name: Build Release Bundle
         run: ./gradlew bundleRelease
-
-      - name: Sign AAB
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: app/build/outputs/bundle/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: app-release-bundle
-          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+          path: app/build/outputs/bundle/release/salary-release.aab
